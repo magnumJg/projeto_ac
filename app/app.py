@@ -12,19 +12,47 @@ st.set_page_config(
 )
 
 # =========================
-# TÍTULO E DESCRIÇÃO
+# ESTILO (CSS CUSTOM)
+# =========================
+st.markdown("""
+    <style>
+        .main {
+            background-color: #f5f7fa;
+        }
+        .block-container {
+            padding-top: 2rem;
+        }
+        .stButton button {
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 8px;
+            height: 3em;
+            width: 100%;
+            font-weight: bold;
+        }
+        .stDownloadButton button {
+            background-color: #2196F3;
+            color: white;
+            border-radius: 8px;
+            height: 3em;
+            width: 100%;
+            font-weight: bold;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+# =========================
+# HEADER
 # =========================
 st.title("📈 Previsão de Aderência a Investimentos")
 st.markdown(
-    """
-    Faça upload de um arquivo CSV com dados de clientes e descubra quais têm maior probabilidade de investir.
-    """
+    "Identifique rapidamente os clientes com maior probabilidade de investir e otimize suas campanhas."
 )
 
 st.divider()
 
 # =========================
-# CARREGAR MODELO
+# CARREGAR MODELOS
 # =========================
 @st.cache_resource
 def load_models():
@@ -37,7 +65,7 @@ def load_models():
 preprocess, model = load_models()
 
 # =========================
-# LAYOUT EM COLUNAS
+# LAYOUT
 # =========================
 col1, col2 = st.columns([1, 2])
 
@@ -48,18 +76,31 @@ with col1:
     st.subheader("📂 Upload de dados")
 
     uploaded_file = st.file_uploader(
-        "Envie um arquivo CSV",
+        "Selecione seu arquivo CSV",
         type=["csv"]
     )
 
-    st.markdown("---")
+    st.markdown("### ℹ️ Instruções")
+    st.markdown("""
+    - O arquivo deve estar em formato CSV  
+    - As colunas devem ser iguais às usadas no treinamento  
+    - Não inclua a coluna target  
+    """)
 
-    st.info(
-        "Certifique-se de que o arquivo possui as mesmas colunas utilizadas no treinamento do modelo."
-    )
+    with st.expander("📊 Entenda os dados"):
+        st.markdown("""
+        - **Idade:** pode influenciar o perfil de risco e a propensão a investir  
+        - **Estado civil:** pode refletir estabilidade financeira  
+        - **Escolaridade:** indica nível de conhecimento financeiro  
+        - **Inadimplência:** reduz a probabilidade de investimento  
+        - **Saldo:** quanto maior, maior a capacidade de investir  
+        - **Fez empréstimo:** pode indicar comprometimento financeiro  
+        - **Tempo do último contato:** mostra quão recente foi a interação  
+        - **Número de contatos:** indica engajamento com o banco  
+        """)
 
 # =========================
-# COLUNA 2 - RESULTADO
+# COLUNA 2 - RESULTADOS
 # =========================
 with col2:
     st.subheader("📊 Resultados")
@@ -71,7 +112,7 @@ with col2:
         st.dataframe(df.head(), use_container_width=True)
 
         if st.button("🚀 Gerar previsões"):
-            with st.spinner("Processando dados..."):
+            with st.spinner("Analisando dados..."):
 
                 try:
                     # =========================
@@ -87,11 +128,11 @@ with col2:
                     # =========================
                     def classificar(p):
                         if p > 0.7:
-                            return "Alta"
+                            return "🔥 Alta"
                         elif p > 0.4:
-                            return "Média"
+                            return "⚡ Média"
                         else:
-                            return "Baixa"
+                            return "❄️ Baixa"
 
                     df["categoria"] = df["probabilidade"].apply(classificar)
 
@@ -102,8 +143,42 @@ with col2:
 
                     st.success("✅ Previsões geradas com sucesso!")
 
+                    # =========================
+                    # MÉTRICAS (DASHBOARD)
+                    # =========================
+                    alta = (df["categoria"] == "🔥 Alta").sum()
+                    media = (df["categoria"] == "⚡ Média").sum()
+                    baixa = (df["categoria"] == "❄️ Baixa").sum()
+
+                    m1, m2, m3 = st.columns(3)
+                    m1.metric("🔥 Alta probabilidade", alta)
+                    m2.metric("⚡ Média probabilidade", media)
+                    m3.metric("❄️ Baixa probabilidade", baixa)
+
                     st.markdown("### 📈 Resultado final")
-                    st.dataframe(df, use_container_width=True)
+
+                    # =========================
+                    # TABELA COM ESTILO
+                    # =========================
+                    def color_categoria(val):
+                        if val == "Alta":
+                            return "background-color: #c8f7c5"
+                        elif val == "Média":
+                            return "background-color: #fff3cd"
+                        else:
+                            return "background-color: #f8d7da"
+
+                    st.dataframe(
+                        df,
+                        column_config={
+                            "probabilidade": st.column_config.ProgressColumn(
+                                "Probabilidade",
+                                min_value=0,
+                                max_value=1,
+                            )
+                        },
+                        use_container_width=True
+                    )
 
                     # =========================
                     # DOWNLOAD
@@ -121,4 +196,4 @@ with col2:
                     st.error(f"Erro ao processar os dados: {e}")
 
     else:
-        st.warning("👈 Faça o upload de um arquivo CSV para começar.")
+        st.info("👈 Faça o upload de um arquivo CSV para começar.")
